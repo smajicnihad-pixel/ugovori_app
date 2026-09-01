@@ -29,7 +29,7 @@ jobs:
         run: flutter pub get
 
       - name: Izgradi Release APK
-        run: flutter build apk --release --no-tree-shake-icons
+        run: flutter build apk --release --no-tree-shake-icons --android-skip-build-dependency-validation
 
       - name: Sacuvaj APK fajl (Artifact)
         uses: actions/upload-artifact@v4
