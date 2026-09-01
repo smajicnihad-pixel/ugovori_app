@@ -22,6 +22,8 @@ jobs:
           cache: false
       - name: Preuzmi zavisnosti (Pub get)
         run: flutter pub get
+      - name: Izvuci SHA-1 potpisa
+        run: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android || true
       - name: Izgradi Release APK
         run: flutter build apk --release
       - name: Sacuvaj APK fajl (Artifact)
