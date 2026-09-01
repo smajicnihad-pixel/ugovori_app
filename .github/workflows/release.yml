@@ -1,36 +1,29 @@
 name: Build Flutter APK
-
 on:
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout kod
         uses: actions/checkout@v4
-
       - name: Postavi Java 17
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
-
       - name: Postavi Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
-
+          flutter-version: '3.47.2'
+          cache: false
       - name: Preuzmi zavisnosti (Pub get)
         run: flutter pub get
-
       - name: Izgradi Release APK
-        run: flutter build apk --release --no-tree-shake-icons --android-skip-build-dependency-validation
-
+        run: flutter build apk --release
       - name: Sacuvaj APK fajl (Artifact)
         uses: actions/upload-artifact@v4
         with:
