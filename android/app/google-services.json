@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "973750863691",
+    "project_id": "vertragsuebersicht-331b3",
+    "storage_bucket": "vertragsuebersicht-331b3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:973750863691:android:f0f6cb16af2094d35b0ace",
+        "android_client_info": {
+          "package_name": "com.example.ugovori_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAi2oZj5BR6D0zN4C3adRcXSezfpE6KgOY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
