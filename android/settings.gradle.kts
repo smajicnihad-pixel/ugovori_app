@@ -5,6 +5,12 @@ pluginManagement {
         properties.getProperty("flutter.sdk") ?: throw GradleException("Flutter SDK not found in local.properties")
     }
     includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
 }
 
 plugins {
