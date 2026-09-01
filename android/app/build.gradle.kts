@@ -40,5 +40,5 @@ flutter {
 }
 
 dependencies {
-    implementation(project(":flutter"))
+    
 }
