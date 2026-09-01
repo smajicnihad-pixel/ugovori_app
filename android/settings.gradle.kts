@@ -24,3 +24,6 @@ plugins {
 }
 
 include(":app")
+
+include(":flutter")
+project(":flutter").projectDir = file("/packages/flutter_tools/gradle")
