@@ -33,12 +33,7 @@ void main() async {
     const InitializationSettings initSettings =
         InitializationSettings(android: androidSettings);
 
-    await notificationsPlugin.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        // Obada klik na notifikaciju ako je potrebno
-      },
-    );
+    await notificationsPlugin.initialize(initSettings);
 
     notificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
