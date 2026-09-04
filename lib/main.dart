@@ -7,14 +7,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
-
-final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,21 +20,6 @@ void main() async {
     } catch (e) {
       debugPrint('Firebase Init Error: $e');
     }
-
-    tz.initializeTimeZones();
-
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initSettings =
-        InitializationSettings(android: androidSettings);
-
-    await notificationsPlugin.initialize(initSettings, onSelectNotification: (String? payload) async {
-      // Opcionalno rukovanje klikom na notifikaciju
-    });
-
-    notificationsPlugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
   }
 
   runApp(const VertragsUebersichtApp());
@@ -315,10 +295,6 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
           _ugovori = mapaUgovora.values.toList();
         });
         await _sacuvajPodatke(syncCloud: false);
-
-        for (final u in _ugovori) {
-          await _zakaziNotifikacije(u);
-        }
       } else if (_ugovori.isNotEmpty) {
         await _sinhronizujNaCloud();
       }
@@ -450,49 +426,6 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
         ],
       ),
     );
-  }
-
-  Future<void> _otkaziSveNotifikacijeZaUgovor(Ugovor u) async {
-    if (kIsWeb) return;
-    final baseId = u.id.hashCode.abs() % 100000;
-    for (int i = 0; i < 40; i++) {
-      await notificationsPlugin.cancel(baseId + i);
-    }
-  }
-
-  Future<void> _zakaziNotifikacije(Ugovor ugovor) async {
-    if (kIsWeb || ugovor.arhiviran) return;
-
-    final datumPrvogUpozorenja = ugovor.kraj.subtract(Duration(days: ugovor.danaPrijeIsteka));
-    final baseId = ugovor.id.hashCode.abs() % 100000;
-    final now = DateTime.now();
-
-    DateTime zakazanoVrijeme = datumPrvogUpozorenja;
-    int index = 0;
-
-    while (zakazanoVrijeme.isBefore(ugovor.kraj) && index < 40) {
-      if (zakazanoVrijeme.isAfter(now)) {
-        await notificationsPlugin.zonedSchedule(
-          baseId + index,
-          'Vertragskündigung: ${ugovor.naziv}',
-          'Haben Sie den Vertrag "${ugovor.naziv}" bereits gekündigt?',
-          tz.TZDateTime.from(zakazanoVrijeme, tz.local),
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'ugovori_channel',
-              'Vertragserinnerungen',
-              importance: Importance.max,
-              priority: Priority.high,
-            ),
-          ),
-          androidAllowWhileIdle: true,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-        );
-      }
-      zakazanoVrijeme = zakazanoVrijeme.add(const Duration(hours: 72));
-      index++;
-    }
   }
 
   DateTime _dodajMiesece(DateTime date, int months) {
@@ -673,7 +606,6 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
                           ugovorZaIzmjenu.trajanjeMjeseci = odabranoTrajanje;
                           ugovorZaIzmjenu.danaPrijeIsteka = parsedPodsjetnik;
                         });
-                        await _zakaziNotifikacije(ugovorZaIzmjenu);
                       } else {
                         final novi = Ugovor(
                           id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -685,7 +617,6 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
                           danaPrijeIsteka: parsedPodsjetnik,
                         );
                         setState(() => _ugovori.add(novi));
-                        await _zakaziNotifikacije(novi);
                       }
 
                       await _sacuvajPodatke();
@@ -819,10 +750,6 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
           _ugovori = loaded;
         });
         await _sacuvajPodatke();
-
-        for (final u in _ugovori) {
-          await _zakaziNotifikacije(u);
-        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${loaded.length} Verträge erfolgreich wiederhergestellt!')),
@@ -1042,15 +969,9 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
                         setState(() {
                           u.arhiviran = !u.arhiviran;
                         });
-                        if (u.arhiviran) {
-                          await _otkaziSveNotifikacijeZaUgovor(u);
-                        } else {
-                          await _zakaziNotifikacije(u);
-                        }
                         await _sacuvajPodatke();
                       } else if (val == 'delete') {
                         setState(() => _ugovori.remove(u));
-                        await _otkaziSveNotifikacijeZaUgovor(u);
                         await _sacuvajPodatke();
                       }
                     },
