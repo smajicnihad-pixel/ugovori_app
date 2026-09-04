@@ -33,7 +33,9 @@ void main() async {
     const InitializationSettings initSettings =
         InitializationSettings(android: androidSettings);
 
-    await notificationsPlugin.initialize(initSettings);
+    await notificationsPlugin.initialize(initSettings, onSelectNotification: (String? payload) async {
+      // Opcionalno rukovanje klikom na notifikaciju
+    });
 
     notificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
@@ -454,7 +456,7 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
     if (kIsWeb) return;
     final baseId = u.id.hashCode.abs() % 100000;
     for (int i = 0; i < 40; i++) {
-      await notificationsPlugin.cancel(id: baseId + i);
+      await notificationsPlugin.cancel(baseId + i);
     }
   }
 
@@ -471,11 +473,11 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
     while (zakazanoVrijeme.isBefore(ugovor.kraj) && index < 40) {
       if (zakazanoVrijeme.isAfter(now)) {
         await notificationsPlugin.zonedSchedule(
-          id: baseId + index,
-          title: 'Vertragskündigung: ${ugovor.naziv}',
-          body: 'Haben Sie den Vertrag "${ugovor.naziv}" bereits gekündigt?',
-          scheduledDate: tz.TZDateTime.from(zakazanoVrijeme, tz.local),
-          notificationDetails: const NotificationDetails(
+          baseId + index,
+          'Vertragskündigung: ${ugovor.naziv}',
+          'Haben Sie den Vertrag "${ugovor.naziv}" bereits gekündigt?',
+          tz.TZDateTime.from(zakazanoVrijeme, tz.local),
+          const NotificationDetails(
             android: AndroidNotificationDetails(
               'ugovori_channel',
               'Vertragserinnerungen',
@@ -483,7 +485,9 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
               priority: Priority.high,
             ),
           ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          androidAllowWhileIdle: true,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
         );
       }
       zakazanoVrijeme = zakazanoVrijeme.add(const Duration(hours: 72));
