@@ -11,17 +11,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  if (!kIsWeb) {
-    try {
-      await Firebase.initializeApp();
-    } catch (e) {
-      debugPrint('Firebase Init Error: $e');
-    }
-  }
-
   runApp(const VertragsUebersichtApp());
 }
 
@@ -192,17 +183,28 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _ucitajPodatke();
+    _inicijalizujAplikaciju();
+  }
+
+  Future<void> _inicijalizujAplikaciju() async {
+    await _ucitajPodatke();
 
     if (!kIsWeb) {
-      FirebaseAuth.instance.authStateChanges().listen((user) {
-        setState(() {
-          _currentUser = user;
+      try {
+        await Firebase.initializeApp();
+        FirebaseAuth.instance.authStateChanges().listen((user) {
+          if (mounted) {
+            setState(() {
+              _currentUser = user;
+            });
+          }
+          if (user != null) {
+            _preuzmiIzClouda();
+          }
         });
-        if (user != null) {
-          _preuzmiIzClouda();
-        }
-      });
+      } catch (e) {
+        debugPrint('Firebase Init Error: $e');
+      }
     }
   }
 
@@ -218,9 +220,11 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
         final String data = await file.readAsString();
         if (data.isNotEmpty) {
           final List decoded = jsonDecode(data);
-          setState(() {
-            _ugovori = decoded.map((e) => Ugovor.fromMap(e)).toList();
-          });
+          if (mounted) {
+            setState(() {
+              _ugovori = decoded.map((e) => Ugovor.fromMap(e)).toList();
+            });
+          }
         }
       }
     } catch (e) {
@@ -244,7 +248,7 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
 
   Future<void> _sinhronizujNaCloud() async {
     if (_currentUser == null) return;
-    setState(() => _isSyncing = true);
+    if (mounted) setState(() => _isSyncing = true);
     try {
       final batch = FirebaseFirestore.instance.batch();
       final userUgovoriRef = FirebaseFirestore.instance
@@ -272,7 +276,7 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
 
   Future<void> _preuzmiIzClouda() async {
     if (_currentUser == null) return;
-    setState(() => _isSyncing = true);
+    if (mounted) setState(() => _isSyncing = true);
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -291,9 +295,11 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
           mapaUgovora[u.id] = u;
         }
 
-        setState(() {
-          _ugovori = mapaUgovora.values.toList();
-        });
+        if (mounted) {
+          setState(() {
+            _ugovori = mapaUgovora.values.toList();
+          });
+        }
         await _sacuvajPodatke(syncCloud: false);
       } else if (_ugovori.isNotEmpty) {
         await _sinhronizujNaCloud();
@@ -330,9 +336,11 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
     try {
       await _googleSignIn.disconnect();
       await FirebaseAuth.instance.signOut();
-      setState(() {
-        _currentUser = null;
-      });
+      if (mounted) {
+        setState(() {
+          _currentUser = null;
+        });
+      }
     } catch (e) {
       debugPrint('Logout error: $e');
     }
