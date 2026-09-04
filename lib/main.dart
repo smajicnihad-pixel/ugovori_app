@@ -33,7 +33,7 @@ void main() async {
     const InitializationSettings initSettings =
         InitializationSettings(android: androidSettings);
 
-    await notificationsPlugin.initialize(settings: initSettings);
+    await notificationsPlugin.initialize(initSettings);
 
     notificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
@@ -99,16 +99,34 @@ class Ugovor {
       };
 
   factory Ugovor.fromMap(Map<String, dynamic> map) {
-    final start = DateTime.parse(map['pocetak']);
-    final end = DateTime.parse(map['kraj']);
-    int months = map['trajanjeMjeseci'] ?? 12;
+    DateTime start;
+    try {
+      start = DateTime.parse(map['pocetak'] ?? DateTime.now().toIso8601String());
+    } catch (_) {
+      start = DateTime.now();
+    }
+
+    DateTime end;
+    try {
+      end = DateTime.parse(map['kraj'] ?? DateTime.now().add(const Duration(days: 365)).toIso8601String());
+    } catch (_) {
+      end = DateTime.now().add(const Duration(days: 365));
+    }
+
+    double parsedCijena = 0.0;
+    if (map['cijena'] is num) {
+      parsedCijena = (map['cijena'] as num).toDouble();
+    } else if (map['cijena'] is String) {
+      parsedCijena = double.tryParse(map['cijena'].replaceAll(',', '.')) ?? 0.0;
+    }
+
     return Ugovor(
-      id: map['id'],
-      naziv: map['naziv'],
-      cijena: (map['cijena'] as num).toDouble(),
+      id: map['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      naziv: map['naziv'] ?? 'Bez naziva',
+      cijena: parsedCijena,
       pocetak: start,
       kraj: end,
-      trajanjeMjeseci: months,
+      trajanjeMjeseci: map['trajanjeMjeseci'] ?? 12,
       danaPrijeIsteka: map['danaPrijeIsteka'] ?? 30,
       arhiviran: map['arhiviran'] ?? false,
     );
@@ -282,19 +300,22 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
 
       if (snapshot.docs.isNotEmpty) {
         final cloudUgovori = snapshot.docs.map((doc) => Ugovor.fromMap(doc.data())).toList();
+        
+        final Map<String, Ugovor> mapaUgovora = {};
+        for (var u in _ugovori) {
+          mapaUgovora[u.id] = u;
+        }
+        for (var u in cloudUgovori) {
+          mapaUgovora[u.id] = u;
+        }
+
         setState(() {
-          _ugovori = cloudUgovori;
+          _ugovori = mapaUgovora.values.toList();
         });
         await _sacuvajPodatke(syncCloud: false);
 
         for (final u in _ugovori) {
           await _zakaziNotifikacije(u);
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${cloudUgovori.length} Verträge synchronisiert.')),
-          );
         }
       } else if (_ugovori.isNotEmpty) {
         await _sinhronizujNaCloud();
