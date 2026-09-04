@@ -9,8 +9,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -186,7 +186,7 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
   List<Ugovor> _ugovori = [];
   User? _currentUser;
   bool _isSyncing = false;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']); // <--- ISPRAVNA INICIJALIZACIJA
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
 
   @override
   void initState() {
@@ -206,21 +206,36 @@ class _GlavniEkranState extends State<GlavniEkran> with SingleTickerProviderStat
     }
   }
 
+  Future<File> _getLokalniFajl() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/ugovori_spremište.json');
+  }
+
   Future<void> _ucitajPodatke() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? data = prefs.getString('ugovori_lista');
-    if (data != null) {
-      final List decoded = jsonDecode(data);
-      setState(() {
-        _ugovori = decoded.map((e) => Ugovor.fromMap(e)).toList();
-      });
+    try {
+      final file = await _getLokalniFajl();
+      if (await file.exists()) {
+        final String data = await file.readAsString();
+        if (data.isNotEmpty) {
+          final List decoded = jsonDecode(data);
+          setState(() {
+            _ugovori = decoded.map((e) => Ugovor.fromMap(e)).toList();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Greška pri učitavanju lokalnih podataka: $e');
     }
   }
 
   Future<void> _sacuvajPodatke({bool syncCloud = true}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final data = jsonEncode(_ugovori.map((e) => e.toMap()).toList());
-    await prefs.setString('ugovori_lista', data);
+    try {
+      final file = await _getLokalniFajl();
+      final data = jsonEncode(_ugovori.map((e) => e.toMap()).toList());
+      await file.writeAsString(data);
+    } catch (e) {
+      debugPrint('Greška pri snimanju lokalnih podataka: $e');
+    }
 
     if (syncCloud && _currentUser != null && !kIsWeb) {
       await _sinhronizujNaCloud();
